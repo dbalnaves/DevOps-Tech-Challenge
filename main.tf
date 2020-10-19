@@ -190,13 +190,14 @@ resource "aws_ecr_repository" "ecs" {
 resource "null_resource" "push" {
   provisioner "local-exec" {
     command = <<EOF
-account_id=$(aws sts get-caller-identity --query Account | sed -e 's/"//g')
-aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$account_id.dkr.ecr.$region.amazonaws.com"
+aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$ecr_fqdn"
+docker tag "servian/techchallengeapp:latest" "$repository"
 docker push "$repository:latest"
-docker logout "$account_id.dkr.ecr.$region.amazonaws.com"
+docker logout "$ecr_fqdn"
 EOF
 
     environment = {
+      ecr_fqdn = regex("^([^/]*)/", aws_ecr_repository.ecs.repository_url).0
       region = var.region
       repository = aws_ecr_repository.ecs.repository_url
     }
